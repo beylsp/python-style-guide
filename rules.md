@@ -7,6 +7,20 @@
   1. [Packages](#packages)
   1. [Exceptions](#exceptions)
   1. [Global variables](#global-variables)
+  1. [Inner Classes and Functions](#inner-classes-and-functions)
+  1. [List Comprehensions](#list-comprehensions)
+  1. [Default Iterators and Operators](#default-iterators-and-operators)
+  1. [Generators](#generators)
+  1. [Lambda Functions](#lambda-functions)
+  1. [Conditional Expressions](#conditional-expressions)
+  1. [Default Argument Values](#default-argument-values)
+  1. [Properties](#properties)
+  1. [True False evaluations](#true-false-evaluations)
+  1. [Deprecated Language Features](#deprecated-language-features)
+  1. [Lexical Scoping](#lexical-scoping)
+  1. [Function and Method Decorators](#function-and-method-decorators)
+  1. [Threading](#threading)
+  1. [Power Features](#power-features)
 
 ## Lint
 
@@ -175,5 +189,473 @@ Avoid global variables in favor of class variables. Some exceptions are:
 * It is sometimes useful for globals to cache values needed or returned by functions.
 * If needed, globals should be made internal to the module and accessed through public module level functions; see [Naming](https://github.com/beylsp/python-style-guide/blob/master/README.md#naming).
 
+## Inner Classes and Functions
 
+Nested/local/inner classes and functions are fine.
 
+### Definition
+
+A class can be defined inside of a method, function, or class. A function can be defined inside a method or function. Nested functions have read-only access to variables defined in enclosing scopes.
+
+### Pros
+
+Allows definition of utility classes and functions that are only used inside of a very limited scope. Very [ADT](https://en.wikipedia.org/wiki/Abstract_data_type)-y.
+
+### Cons
+
+Instances of nested or local classes cannot be pickled.
+
+### Decision
+
+They are fine.
+
+## List Comprehensions
+
+Okay to use for simple cases.
+
+### Definition
+
+List comprehensions and generator expressions provide a concise and efficient way to create lists and iterators without resorting to the use of `map()`, `filter()`, or `lambda`.
+
+### Pros
+
+Simple list comprehensions can be clearer and simpler than other list creation techniques. Generator expressions can be very efficient, since they avoid the creation of a list entirely.
+
+### Cons
+
+Complicated list comprehensions or generator expressions can be hard to read.
+
+### Decision
+
+Okay to use for simple cases. Each portion must fit on one line: mapping expression, for clause, filter expression. Multiple for clauses or filter expressions are not permitted. Use loops instead when things get more complicated.
+
+```python
+Yes:
+  result = []
+  for x in range(10):
+      for y in range(5):
+          if x * y > 10:
+              result.append((x, y))
+
+  for x in xrange(5):
+      for y in xrange(5):
+          if x != y:
+              for z in xrange(5):
+                  if y != z:
+                      yield (x, y, z)
+
+  return ((x, complicated_transform(x))
+          for x in long_generator_function(parameter)
+          if x is not None)
+
+  squares = [x * x for x in range(10)]
+
+  eat(jelly_bean for jelly_bean in jelly_beans
+      if jelly_bean.color == 'black')
+```
+
+```python
+No:
+  result = [(x, y) for x in range(10) for y in range(5) if x * y > 10]
+
+  return ((x, y, z)
+          for x in xrange(5)
+          for y in xrange(5)
+          if x != y
+          for z in xrange(5)
+          if y != z)
+```
+
+## Default Iterators and Operators
+
+Use default iterators and operators for types that support them, like lists, dictionaries, and files.
+
+### Defintion
+
+Container types, like dictionaries and lists, define default iterators and membership test operators ("in" and "not in").
+
+### Pros
+
+The default iterators and operators are simple and efficient. They express the operation directly, without extra method calls. A function that uses default operators is generic. It can be used with any type that supports the operation.
+
+### Cons
+
+You can't tell the type of objects by reading the method names (e.g. has_key() means a dictionary). This is also an advantage.
+
+### Decision
+
+Use default iterators and operators for types that support them, like lists, dictionaries, and files. The built-in types define iterator methods, too. Prefer these methods to methods that return lists, except that you should not mutate a container while iterating over it.
+
+```python
+Yes:  for key in adict: ...
+      if key not in adict: ...
+      if obj in alist: ...
+      for line in afile: ...
+      for k, v in dict.iteritems(): ...
+```
+
+```python
+No:   for key in adict.keys(): ...
+      if not adict.has_key(key): ...
+      for line in afile.readlines(): ...
+```
+
+## Generators
+
+Use generators as needed.
+
+### Definition
+
+A generator function returns an iterator that yields a value each time it executes a yield statement. After it yields a value, the runtime state of the generator function is suspended until the next value is needed.
+
+### Pros
+
+Simpler code, because the state of local variables and control flow are preserved for each call. A generator uses less memory than a function that creates an entire list of values at once.
+
+### Cons
+
+None.
+
+### Decision
+
+Fine. Use "Yields:" rather than "Returns:" in the doc string for generator functions.
+
+## Lambda Functions
+
+Okay for one-liners.
+
+### Definition
+
+Lambdas define anonymous functions in an expression, as opposed to a statement. They are often used to define callbacks or operators for higher-order functions like `map()` and `filter()`.
+
+### Pros
+
+Convenient.
+
+### Cons
+
+Harder to read and debug than local functions. The lack of names means stack traces are more difficult to understand. Expressiveness is limited because the function may only contain an expression.
+
+### Decision
+
+Okay to use them for one-liners. If the code inside the lambda function is any longer than 60–80 chars, it's probably better to define it as a regular (nested) function.
+
+For common operations like multiplication, use the functions from the `operator` module instead of lambda functions. For example, prefer `operator.mul` to `lambda x, y: x * y`.
+
+## Conditional Expressions
+
+Okay for one-liners.
+
+### Definition
+
+Conditional expressions are mechanisms that provide a shorter syntax for if statements. For example: `x = 1 if cond else 2`.
+
+### Pros
+
+Shorter and more convenient than an if statement.
+
+### Cons
+
+May be harder to read than an if statement. The condition may be difficult to locate if the expression is long.
+
+### Decision
+
+Okay to use for one-liners. In other cases prefer to use a complete if statement.
+
+## Default Argument Values
+
+Okay in most cases.
+
+### Definition
+
+You can specify values for variables at the end of a function's parameter list, e.g., `def foo(a, b=0):`. If foo is called with only one argument, b is set to 0. If it is called with two arguments, b has the value of the second argument.
+
+### Pros
+
+Often you have a function that uses lots of default values, but—rarely—you want to override the defaults. Default argument values provide an easy way to do this, without having to define lots of functions for the rare exceptions. Also, Python does not support overloaded methods/functions and default arguments are an easy way of "faking" the overloading behavior.
+
+### Cons
+
+Default arguments are evaluated once at module load time. This may cause problems if the argument is a mutable object such as a list or a dictionary. If the function modifies the object (e.g., by appending an item to a list), the default value is modified.
+
+### Decision
+
+Okay to use with the following caveat:
+
+Do not use mutable objects as default values in the function or method definition.
+
+```python
+Yes: def foo(a, b=None):
+         if b is None:
+             b = []
+```
+
+```python
+No:  def foo(a, b=[]):
+         ...
+No:  def foo(a, b=time.time()):  # The time the module was loaded???
+         ...
+No:  def foo(a, b=FLAGS.my_thing):  # sys.argv has not yet been parsed...
+         ...
+```
+
+## Properties
+
+Use properties for accessing or setting data where you would normally have used simple, lightweight accessor or setter methods.
+
+### Definition
+
+A way to wrap method calls for getting and setting an attribute as a standard attribute access when the computation is lightweight.
+
+### Pros
+
+Readability is increased by eliminating explicit get and set method calls for simple attribute access. Allows calculations to be lazy. Considered the Pythonic way to maintain the interface of a class. In terms of performance, allowing properties bypasses needing trivial accessor methods when a direct variable access is reasonable. This also allows accessor methods to be added in the future without breaking the interface.
+
+### Cons
+
+Properties are specified after the getter and setter methods are declared, requiring one to notice they are used for properties farther down in the code (except for readonly properties created with the `@property` decorator - see below). Must inherit from `object`. Can hide side-effects much like operator overloading. Can be confusing for subclasses.
+
+### Decision
+
+Use properties in new code to access or set data where you would normally have used simple, lightweight accessor or setter methods. Read-only properties should be created with the `@property` [decorator](#function-and-method-decorators).
+
+Inheritance with properties can be non-obvious if the property itself is not overridden. Thus one must make sure that accessor methods are called indirectly to ensure methods overridden in subclasses are called by the property (using the Template Method DP).
+
+```python
+Yes: import math
+
+     class Square(object):
+         """A square with two properties: a writable area and a read-only perimeter.
+
+         To use:
+         >>> sq = Square(3)
+         >>> sq.area
+         9
+         >>> sq.perimeter
+         12
+         >>> sq.area = 16
+         >>> sq.side
+         4
+         >>> sq.perimeter
+         16
+         """
+
+         def __init__(self, side):
+             self.side = side
+
+         def __get_area(self):
+             """Calculates the 'area' property."""
+             return self.side ** 2
+
+         def ___get_area(self):
+             """Indirect accessor for 'area' property."""
+             return self.__get_area()
+
+         def __set_area(self, area):
+             """Sets the 'area' property."""
+             self.side = math.sqrt(area)
+
+         def ___set_area(self, area):
+             """Indirect setter for 'area' property."""
+             self.__set_area(area)
+
+         area = property(___get_area, ___set_area,
+                         doc="""Gets or sets the area of the square.""")
+
+         @property
+         def perimeter(self):
+             return self.side * 4
+```
+
+## True False evaluations
+
+Use the "implicit" false if at all possible.
+
+### Definition
+
+Python evaluates certain values as false when in a boolean context. A quick "rule of thumb" is that all "empty" values are considered `false` so `0`, `None`, `[]`, `{}`, `''` all evaluate as `false` in a boolean context.
+
+### Pros
+
+Conditions using Python booleans are easier to read and less error-prone. In most cases, they're also faster.
+
+### Cons
+
+May look strange to C/C++ developers.
+
+### Decision
+
+Use the "implicit" false if at all possible, e.g., `if foo:` rather than `if foo != []:`. There are a few caveats that you should keep in mind though:
+
+* Never use `==` or `!=` to compare singletons like `None`. Use `is` or `is not`.
+* Beware of writing `if x:` when you really mean `if x is not None`:—e.g., when testing whether a variable or argument that defaults to `None` was set to some other value. The other value might be a value that's false in a boolean context!
+* For sequences (strings, lists, tuples), use the fact that empty sequences are false, so `if not seq:` or `if seq:` is preferable to `if len(seq):` or `if not len(seq):`.
+* When handling integers, implicit false may involve more risk than benefit (i.e., accidentally handling None as 0). You may compare a value which is known to be an integer (and is not the result of `len()`) against the integer 0.
+
+```python
+Yes: if not users:
+         print 'no users'
+
+     if foo == 0:
+         self.handle_zero()
+
+     if i % 10 == 0:
+         self.handle_multiple_of_ten()
+```
+
+```python
+No:  if len(users) == 0:
+         print 'no users'
+
+     if foo is not None and not foo:
+         self.handle_zero()
+
+     if not i % 10:
+         self.handle_multiple_of_ten()
+```
+
+* Note that `'0'` (i.e., `0` as string) evaluates to true.
+
+## Deprecated Language Features
+
+Use string methods instead of the `string` module where possible. Use function call syntax instead of `apply`. Use list comprehensions and `for` loops instead of `filter` and `map` when the function argument would have been an inlined lambda anyway. Use `for` loops instead of `reduce`.
+
+### Definition
+
+Current versions of Python provide alternative constructs that people find generally preferable.
+
+### Decision
+
+Do not use any Python version which does not support these features, so there is no reason not to use the new styles.
+
+```python
+Yes: words = foo.split(':')
+
+     [x[1] for x in my_list if x[2] == 5]
+
+     map(math.sqrt, data)    # Ok. No inlined lambda expression.
+
+     fn(*args, **kwargs)
+```
+
+```python
+No:  words = string.split(foo, ':')
+
+     map(lambda x: x[1], filter(lambda x: x[2] == 5, my_list))
+
+     apply(fn, args, kwargs)
+```
+
+## Lexical Scoping
+
+Okay to use.
+
+### Definition
+
+A nested Python function can refer to variables defined in enclosing functions, but can not assign to them. Variable bindings are resolved using lexical scoping, that is, based on the static program text. Any assignment to a name in a block will cause Python to treat all references to that name as a local variable, even if the use precedes the assignment. If a global declaration occurs, the name is treated as a global variable.
+
+An example of the use of this feature is:
+
+```python
+def get_adder(summand1):
+    """Returns a function that adds numbers to a given number."""
+    def adder(summand2):
+        return summand1 + summand2
+
+    return adder
+```
+
+### Pros
+
+Often results in clearer, more elegant code. Especially comforting to experienced Lisp and Scheme (and Haskell and ML and …) programmers.
+
+### Cons
+
+Can lead to confusing bugs. Such as this example based on [PEP-0227](https://www.python.org/dev/peps/pep-0227/):
+
+```python
+i = 4
+def foo(x):
+    def bar():
+        print i,
+    # ...
+    # A bunch of code here
+    # ...
+    for i in x:  # Ah, i *is* local to Foo, so this is what Bar sees
+        print i,
+    bar()
+```
+
+So `foo([1, 2, 3])` will print `1 2 3 3`, not `1 2 3 4`.
+
+### Decision
+
+Okay to use.
+
+## Function and Method Decorators
+
+Use decorators judiciously when there is a clear advantage.
+
+### Definition
+
+[Decorators for Functions and Methods](https://www.python.org/dev/peps/pep-0318/) (a.k.a "the @ notation"). The most common decorators are `@classmethod` and `@staticmethod`, for converting ordinary methods to class or static methods. However, the decorator syntax allows for user-defined decorators as well. Specifically, for some function `my_decorator`, this:
+
+```python
+class C(object):
+    @my_decorator
+    def method(self):
+        # method body ...
+```
+
+is equivalent to:
+
+```python
+class C(object):
+    def method(self):
+        # method body ...
+    method = my_decorator(method)
+```
+
+### Pros
+
+Elegantly specifies some transformation on a method; the transformation might eliminate some repetitive code, enforce invariants, etc.
+
+### Cons
+
+Decorators can perform arbitrary operations on a function's arguments or return values, resulting in surprising implicit behavior. Additionally, decorators execute at import time. Failures in decorator code are pretty much impossible to recover from.
+
+### Decision
+
+Use decorators judiciously when there is a clear advantage. Decorators should follow the same import and naming guidelines as functions. Decorator `pydoc` should clearly state that the function is a decorator. Write unit tests for decorators.
+
+Avoid external dependencies in the decorator itself (e.g. don't rely on files, sockets, database connections, etc.), since they might not be available when the decorator runs (at import time, perhaps from `pydoc` or other tools). A decorator that is called with valid parameters should (as much as possible) be guaranteed to succeed in all cases.
+
+Decorators are a special case of "top level code" - see [main](https://github.com/beylsp/python-style-guide/blob/master/README.md#main) for more discussion.
+
+## Threading
+
+Do not rely on the atomicity of built-in types.
+
+While Python's built-in data types such as dictionaries appear to have atomic operations, there are corner cases where they aren't atomic (e.g. `if __hash__` or `__eq__` are implemented as Python methods) and their atomicity should not be relied upon. Neither should you rely on atomic variable assignment (since this in turn depends on dictionaries).
+
+Use the Queue module's Queue data type as the preferred way to communicate data between threads. Otherwise, use the threading module and its locking primitives. Learn about the proper use of condition variables so you can use `threading.Condition` instead of using lower-level locks.
+
+## Power Features
+
+Avoid these features.
+
+### Definition
+
+Python is an extremely flexible language and gives you many fancy features such as metaclasses, access to bytecode, on-the-fly compilation, dynamic inheritance, object reparenting, import hacks, reflection, modification of system internals, etc.
+
+### Pros
+
+These are powerful language features. They can make your code more compact.
+
+### Cons
+
+It's very tempting to use these "cool" features when they're not absolutely necessary. It's harder to read, understand, and debug code that's using unusual features underneath. It doesn't seem that way at first (to the original author), but when revisiting the code, it tends to be more difficult than code that is longer but is straightforward.
+
+### Decision
+
+Avoid these features in your code.
